@@ -2,6 +2,27 @@
 <!-- Created with https://packager.turbowarp.org/ -->
 <html>
 <head>
+<style>
+  /* Reset page body to take up entire phone screen */
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #000000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Force the TurboWarp canvas element to scale to screen size */
+  canvas {
+    width: 100vw !important;
+    height: 100vh !important;
+    object-fit: contain; /* Keeps aspect ratio clean without stretching graphics */
+  }
+</style>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <!-- We only include this to explicitly loosen the CSP of various packager environments. It does not provide any security. -->
