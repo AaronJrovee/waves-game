@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.aaronjrovee.waves",
+        "sha256_cert_fingerprints": ["8C:C0:17:A4:D5:2A:FD:3D:98:75:BF:9E:5F:17:82:9D:8C:2B:02:3E:FE:85:88:C6:09:56:0D:9D:7D:36:A6:95"]
+      }
+    }]
