@@ -5,7 +5,7 @@
 <style>
   html, body {
     width: 100vw;
-    height: 100dvh; /* Uses the true visible height excluding system bars */
+    height: 100dvh;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -20,7 +20,20 @@
     max-height: 100dvh !important;
     width: auto !important;
     height: auto !important;
-    object-fit: contain; /* Scales up as large as possible while keeping the full game visible */
+    object-fit: contain;
+  }
+
+  /* Force landscape layout when phone is held vertically */
+  @media screen and (orientation: portrait) {
+    body {
+      transform: rotate(90deg);
+      transform-origin: left top;
+      width: 100dvh !important;
+      height: 100vw !important;
+      position: absolute;
+      top: 100%;
+      left: 0;
+    }
   }
 </style>
   <meta charset="utf-8">
@@ -457,7 +470,19 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     run().catch(handleError);
   </script>
   <link rel="manifest" href="./manifest.json">
+<script>
+    function forceLandscape() {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock("landscape").catch(function(error) {
+          console.log("Orientation lock failed: ", error);
+        });
+      }
+    }
 
+    // Triggers screen lock on the first tap or touch
+    window.addEventListener("click", forceLandscape, { once: true });
+    window.addEventListener("touchstart", forceLandscape, { once: true });
+  </script>
    <script>
      if ('serviceWorker' in navigator) {
        window.addEventListener('load', () => {
