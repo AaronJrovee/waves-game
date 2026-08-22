@@ -2,6 +2,19 @@
 <!-- Created with https://packager.turbowarp.org/ -->
 <html>
 <head>
+<script>
+  function lockLandscape() {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock("landscape").catch(function(err) {
+        console.log("Orientation lock pending interaction:", err);
+      });
+    }
+  }
+
+  window.addEventListener("load", lockLandscape);
+  window.addEventListener("touchstart", lockLandscape, { once: true });
+  window.addEventListener("click", lockLandscape, { once: true });
+</script>
 <style>
   html, body {
     margin: 0;
@@ -17,6 +30,7 @@
   <!-- We only include this to explicitly loosen the CSP of various packager environments. It does not provide any security. -->
   <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:">
   <title>Waves by CodingAaron</title>
+  <link rel="manifest" href="manifest.json">
   <style>
     body {
       color: #ffffff;
