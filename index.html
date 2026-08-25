@@ -441,58 +441,78 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     run().catch(handleError);
   </script>
 <script>
-    const FIREBASE_URL = "https://waves-records-default-rtdb.firebaseio.com/recordString.json";
+  const FIREBASE_URL = "https://waves-records-default-rtdb.firebaseio.com/recordString.json";
 
-    // Wait until the project finishes loading before syncing
-    const initFirebaseSync = () => {
-      const vm = window.vm || (window.scaffolding && window.scaffolding.vm);
-      if (!vm) {
-        setTimeout(initFirebaseSync, 100);
-        return;
-      }
+  const initFirebaseSync = () => {
+    const vm = window.vm || (window.scaffolding && window.scaffolding.vm);
+    if (!vm) {
+      setTimeout(initFirebaseSync, 100);
+      return;
+    }
 
-      // 1. Fetch the latest live records from Firebase
+    // 1. Initial load from Firebase at startup
+    fetch(FIREBASE_URL)
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          const stage = vm.runtime.getTargetForStage();
+          const variable = stage.lookupVariableByNameAndType('Record Cloud', '') 
+                        || stage.lookupVariableByNameAndType('☁ Record Cloud', '');
+          if (variable) {
+            variable.value = data;
+            vm.runtime.ioDevices.cloud.requestSetVariable('Record Cloud', data);
+            vm.runtime.ioDevices.cloud.requestSetVariable('☁ Record Cloud', data);
+            window._lastSavedRecord = data;
+            console.log("Initial load from Firebase:", data);
+          }
+        }
+      })
+      .catch(err => console.error("Could not fetch cloud data:", err));
+
+    // 2. Constantly check Firebase every 5s for other players' new scores
+    setInterval(() => {
       fetch(FIREBASE_URL)
         .then(res => res.json())
         .then(data => {
-          if (data) {
-            // Update the variable in TurboWarp/Scratch runtime
+          if (data && data !== window._lastSavedRecord) {
+            window._lastSavedRecord = data;
             const stage = vm.runtime.getTargetForStage();
             const variable = stage.lookupVariableByNameAndType('Record Cloud', '') 
                           || stage.lookupVariableByNameAndType('☁ Record Cloud', '');
-            
             if (variable) {
               variable.value = data;
-              window._lastSavedRecord = data;
-              console.log("Loaded records from Firebase:", data);
+              vm.runtime.ioDevices.cloud.requestSetVariable('Record Cloud', data);
+              vm.runtime.ioDevices.cloud.requestSetVariable('☁ Record Cloud', data);
+              console.log("Updated record from another player:", data);
             }
           }
         })
-        .catch(err => console.error("Could not fetch cloud data:", err));
+        .catch(err => console.error("Error polling Firebase:", err));
+    }, 5000);
 
-      // 2. Check every second if the in-game record changed, then save to Firebase
-      setInterval(() => {
-        const stage = vm.runtime.getTargetForStage();
-        if (!stage) return;
+    // 3. Check every 1s if THIS player beat a record, then send to Firebase
+    setInterval(() => {
+      const stage = vm.runtime.getTargetForStage();
+      if (!stage) return;
 
-        const variable = stage.lookupVariableByNameAndType('Record Cloud', '') 
-                      || stage.lookupVariableByNameAndType('☁ Record Cloud', '');
-        
-        const currentRecord = variable?.value;
-        if (currentRecord && currentRecord !== window._lastSavedRecord) {
-          window._lastSavedRecord = currentRecord;
-          console.log("Saving new record to Firebase:", currentRecord);
+      const variable = stage.lookupVariableByNameAndType('Record Cloud', '') 
+                    || stage.lookupVariableByNameAndType('☁ Record Cloud', '');
+      
+      const currentRecord = variable?.value;
+      if (currentRecord && currentRecord !== window._lastSavedRecord) {
+        window._lastSavedRecord = currentRecord;
+        console.log("Saving new record to Firebase:", currentRecord);
 
-          fetch(FIREBASE_URL, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(currentRecord)
-          });
-        }
-      }, 1000);
-    };
+        fetch(FIREBASE_URL, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentRecord)
+        });
+      }
+    }, 1000);
+  };
 
-    initFirebaseSync();
-  </script>
+  initFirebaseSync();
+</script>
 </body>
 </html>
