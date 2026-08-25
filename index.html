@@ -440,5 +440,59 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     };
     run().catch(handleError);
   </script>
+<script>
+    const FIREBASE_URL = "https://waves-records-default-rtdb.firebaseio.com/recordString.json";
+
+    // Wait until the project finishes loading before syncing
+    const initFirebaseSync = () => {
+      const vm = window.vm || (window.scaffolding && window.scaffolding.vm);
+      if (!vm) {
+        setTimeout(initFirebaseSync, 100);
+        return;
+      }
+
+      // 1. Fetch the latest live records from Firebase
+      fetch(FIREBASE_URL)
+        .then(res => res.json())
+        .then(data => {
+          if (data) {
+            // Update the variable in TurboWarp/Scratch runtime
+            const stage = vm.runtime.getTargetForStage();
+            const variable = stage.lookupVariableByNameAndType('Record Cloud', '') 
+                          || stage.lookupVariableByNameAndType('☁ Record Cloud', '');
+            
+            if (variable) {
+              variable.value = data;
+              window._lastSavedRecord = data;
+              console.log("Loaded records from Firebase:", data);
+            }
+          }
+        })
+        .catch(err => console.error("Could not fetch cloud data:", err));
+
+      // 2. Check every second if the in-game record changed, then save to Firebase
+      setInterval(() => {
+        const stage = vm.runtime.getTargetForStage();
+        if (!stage) return;
+
+        const variable = stage.lookupVariableByNameAndType('Record Cloud', '') 
+                      || stage.lookupVariableByNameAndType('☁ Record Cloud', '');
+        
+        const currentRecord = variable?.value;
+        if (currentRecord && currentRecord !== window._lastSavedRecord) {
+          window._lastSavedRecord = currentRecord;
+          console.log("Saving new record to Firebase:", currentRecord);
+
+          fetch(FIREBASE_URL, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentRecord)
+          });
+        }
+      }, 1000);
+    };
+
+    initFirebaseSync();
+  </script>
 </body>
 </html>
