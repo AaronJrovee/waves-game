@@ -441,11 +441,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     run().catch(handleError);
   </script>
 <script>
-  // Your Firebase database endpoint
   const FIREBASE_URL = "https://waves-records-default-rtdb.firebaseio.com/recordString.json";
 
   const initFirebaseSync = () => {
-    // 1. Wait for the Scratch engine to load
     const vm = window.vm || (window.scaffolding && window.scaffolding.vm);
     if (!vm || !vm.runtime) {
       setTimeout(initFirebaseSync, 100);
@@ -458,17 +456,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
       return;
     }
 
-    // 2. Locate your specific text variable
     const getRecordVar = () => {
       return Object.values(stage.variables).find(v => v.name === "Record String");
     };
 
     let lastKnownCloudValue = null;
+    let isLoaded = false; // THE LOCK: Prevents uploading before downloading finishes
 
     const updateScratchFromFirebase = (data) => {
       const variable = getRecordVar();
       if (variable && data !== null) {
-        // Strip out any accidental quotes that might have snuck in
         let cleanData = String(data).replace(/^"|"$/g, '');
         if (variable.value !== cleanData) {
           variable.value = cleanData;
@@ -478,13 +475,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
       }
     };
 
-    // 3. Initial pull from Firebase
+    // 1. Initial pull from Firebase
     fetch(FIREBASE_URL)
       .then(res => res.json())
-      .then(data => updateScratchFromFirebase(data))
-      .catch(err => console.error("Firebase fetch error:", err));
+      .then(data => {
+        if (data) updateScratchFromFirebase(data);
+        console.log("Loaded Firebase string safely:", data);
+        isLoaded = true; // UNLOCK: Now it is safe to save new records
+      })
+      .catch(err => {
+        console.error("Firebase fetch error:", err);
+        isLoaded = true; // Unlock even on error so the game still works offline
+      });
 
-    // 4. Poll Firebase every 3 seconds to get updates from other players
+    // 2. Poll Firebase every 3 seconds for updates
     setInterval(() => {
       fetch(FIREBASE_URL)
         .then(res => res.json())
@@ -492,16 +496,18 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         .catch(err => console.error("Firebase polling error:", err));
     }, 3000);
 
-    // 5. Check Scratch every second and save to Firebase if the score changed
+    // 3. Save new score to Firebase (Guarded by isLoaded)
     setInterval(() => {
+      if (!isLoaded) return; // STOP! Don't save if we haven't loaded yet!
+
       const variable = getRecordVar();
       if (!variable) return;
 
       let currentVal = String(variable.value);
       
-      // Only upload if it changed AND it starts with your "1" safeguard
       if (currentVal !== lastKnownCloudValue && currentVal.startsWith("1")) {
         lastKnownCloudValue = currentVal;
+        console.log("Saving new high score to Firebase:", currentVal);
         
         fetch(FIREBASE_URL, {
           method: 'PUT',
@@ -512,7 +518,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     }, 1000);
   };
 
-  // Start the sync process
   initFirebaseSync();
 </script>
 </body>
